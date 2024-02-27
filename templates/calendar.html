@@ -1,0 +1,222 @@
+<script>
+    //inventory lists
+    cart = [
+
+    ];
+    shopInventory = [
+        {name : "Sword", price : 100},
+        {name : "Shield", price : 50},
+        {name : "Potion", price : 25},
+        {name : "Bow", price : 75}
+    ];
+    characterInventory = [
+        {name : "Dagger", price : 50},
+        {name : "Leather Armor", price : 75}
+    ];
+    selling = []
+
+    //gold values
+    charGold = 100;
+    shopGold = 1000;
+    price = 0;
+    
+    //elements in global scope
+    charGoldElement = null;
+    shopGoldElement = null;
+    priceElement = null;
+    buyButtonElement = null;
+    charInv = null;
+    shopInv = null;
+    cartInv = null;
+    //create shop item using list element
+    function createShopItem(item) {
+        shopItem = document.createElement('div');
+        shopItem.id = "shopItem-" + item.name;
+        shopItem.className = "shopItem";
+        shopItem.innerHTML = item.name + " " + item.price;
+        shopItem.draggable = true;
+        //on drag start, set the data to the list element data and html data
+        shopItem.ondragstart = function(event) {
+            event.dataTransfer.setData("text/plain", JSON.stringify(item)); //stringify to transfer object as string
+            event.dataTransfer.setData("application/my-app", event.target.id); //add the element id to the data transfer
+            event.dataTransfer.effectAllowed = "move";
+        }
+        //for border clearing
+        shopItem.ondragleave = dragLeaveHandler;
+        shopItem.ondrop = dragLeaveHandler;
+        return shopItem
+    }
+
+    //on dom load, load each item into their inventories
+    document.addEventListener("DOMContentLoaded", function(event) {
+        //load shop inventory
+        shopInv = document.getElementById('shopInventory');
+        shopInventory.forEach(element => {
+            shopItem = createShopItem(element);
+            shopInv.appendChild(shopItem);
+        });
+        //load character inventory
+        charInv = document.getElementById('characterInventory');
+        characterInventory.forEach(element => {
+            div = createShopItem(element);
+            charInv.appendChild(div);
+        });
+        //set global scope elements to dom objects
+        charGoldElement = document.getElementById('charGold');
+        shopGoldElement = document.getElementById('shopGold');
+        priceElement = document.getElementById('price');
+        buyButtonElement = document.getElementById('buyButton');
+        cartInv = document.getElementById('cart');
+        //update inner html
+        shopGoldElement.innerHTML = shopGold;
+        charGoldElement.innerHTML = charGold;
+        priceElement.innerHTML = price;
+        //log
+        console.log('shop inventories loaded, inner HTML updated');
+    });
+    
+    function dragOverHandler(event) { //set dragover to move
+        event.preventDefault();
+        event.dataTransfer.dropEffect = "move";
+    }
+
+    function dropHandler(event) { //on drop
+        event.preventDefault();
+
+        let target = event.target; //so we can have a custom drop target
+        //check if accidentally dropped on a child element
+        if (event.target.parentElement.id == "cart" || event.target.parentElement.id == "shopInventory") {
+                target = event.target.parentElement; //if so set target to parent
+                console.log('child of drop target');
+        }
+
+        dataElement = null;
+        //if dropped on a valid target transfer the element
+        if (target.id == "cart" || target.id == "shopInventory") {
+            data = event.dataTransfer.getData("application/my-app");
+            dataElement = document.getElementById(data);
+            if (target.id == dataElement.parentElement.id) {
+                console.log('invalid drop, return to sender');
+                return;
+            }
+            target.appendChild(dataElement);
+            dataElement = document.getElementById(data);
+            console.log('dropped');
+        } else {
+            console.log('invalid drop'); //if not, log invalid drop
+            return; //and return
+        }
+        
+        var itemData = JSON.parse(event.dataTransfer.getData("text/plain")); //parse the item data (opposite of JSON.stringify)
+        target.style.border = "";
+        console.log(itemData);
+
+        //handle our lists
+        if (target.id == "cart") {
+            cart.push(itemData);
+            shopInventory.splice(shopInventory.find(function () {
+                return itemData;
+            }), 1);
+            price += itemData.price;
+        }
+
+        if (target.id == "shopInventory") {
+            selling.push(itemData);
+            price -= itemData.price;
+            dataElement.style.disabled = true;
+        }
+
+        if(price < 0) {
+            buyButtonElement.innerHTML = "Sell";
+        } else {
+            buyButtonElement.innerHTML = "Buy";
+            if(price > charGold) {
+                buyButtonElement.disabled = true;
+            } else {
+                buyButtonElement.disabled = false;
+            }
+        }
+        priceElement.innerHTML = price;
+    }
+
+    function dragEnterHandler(event) {
+        event.target.style.border = "3px solid red";
+    }
+
+    function dragLeaveHandler(event) {
+        event.target.style.border = "";
+    }
+
+    function buy() {
+        //check if we have enough gold, should be impossible with the disabled button
+        if (price > charGold) {
+            alert('Not enough gold!');
+            return;
+        }
+        //if we do, updates golds and price
+        charGold -= price;
+        shopGold += price;
+        price = 0;
+        //update inner html
+        charGoldElement.innerHTML = charGold;
+        shopGoldElement.innerHTML = shopGold;
+        priceElement.innerHTML = price;
+
+        selling.forEach(element => {
+            characterInventory.splice(characterInventory.find(function (elem) {
+                return element.id == elem.id;
+            }), 1);
+            shopInventory.push(element);
+        });
+        selling = [];
+
+        cart.forEach(element => {
+            characterInventory.push(element);
+            div = createShopItem(element);
+            charInv.appendChild(div);
+        });
+        cart = [];
+        cartInv.innerHTML = "Shopping Cart<hr>";
+        
+    }
+</script>
+
+<style>
+    .container {
+        display: flex;
+        justify-content: center;
+        text-align: center;
+    }
+
+    #cart, #shopInventory, #characterInventory{
+        width: 200px;
+        height: 200px;
+        border: 1px solid black;
+        border-radius: 15px;
+        margin: 10px;
+        overflow: auto;
+    }
+
+    .shopItem {
+        border: 1px solid black;
+        margin-bottom: 5px;
+    }
+</style>
+
+<div class="container">
+    <div id="cart" ondragenter="dragEnterHandler(event)" ondragleave="dragLeaveHandler(event)" ondrop="dropHandler(event)" ondragover="dragOverHandler(event)">
+        Shopping Cart <hr>
+    </div>
+    <div id="shopInventory" ondragenter="dragEnterHandler(event)" ondragleave="dragLeaveHandler(event)" ondrop="dropHandler(event)" ondragover="dragOverHandler(event)">
+        Shop Inventory<br>
+        Gold: <span id="shopGold"></span><hr>
+    </div>
+</div>
+
+<div class="container"><pre>Price: <span id="price"></span> gold.</pre> 
+    <button id="buyButton" onclick="buy()">Buy</button>
+</div>
+
+<div class="container">
+    <div id="characterInventory">Character Inventory<br>Gold: <span id="charGold"></span><hr></div>
+</div>

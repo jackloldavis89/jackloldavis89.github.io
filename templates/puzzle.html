@@ -1,0 +1,24 @@
+div>input[id='' type='text']*25
+
+<!-- emmet abrieviations!-->
+
+window.onload = function() {
+    var inputGrid = document.getElementById('inputGrid');
+    for (var i = 0; i < 25; i++) {
+        var input = document.createElement('input');
+        input.id = i;
+        input.onclick = function() {
+            console.log('clicked');
+        }
+        input.type = 'text';
+        inputGrid.appendChild(input);
+    }
+}
+
+<script>
+    document.querySelectorAll
+
+
+</script>
+
+div#inputGrid>input[id onclick type='text']*25
